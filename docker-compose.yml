@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    command: npm run start:dev   # Enable hot reload
+    volumes:
+      - .:/app                   # Mount local source into container
+      - /app/node_modules        # Prevent overwriting node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://postgres:password@db:5432/auction
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auction
+    ports:
+      - "5432:5432"
