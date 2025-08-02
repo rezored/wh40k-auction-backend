@@ -23,7 +23,27 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+WH40K Auction Backend - A NestJS-based REST API for managing Warhammer 40,000 auction listings and bids.
+
+## API Versioning
+
+All API endpoints are versioned with the `/api/v1` prefix following REST API best practices:
+
+- **Authentication**: `/api/v1/auth`
+- **Users**: `/api/v1/user`
+- **Listings**: `/api/v1/listings`
+- **Bids**: `/api/v1/bids`
+
+For detailed API documentation, see [API_STYLE_GUIDE.md](./API_STYLE_GUIDE.md).
+
+## Features
+
+- JWT-based authentication
+- User registration and login
+- Auction listings management
+- Bidding system
+- PostgreSQL database
+- Docker containerization
 
 ## Project setup
 
@@ -44,17 +64,14 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
-## Run tests
+## Development
 
 ```bash
-# unit tests
-$ npm run test
+# format code
+$ npm run format
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# lint code
+$ npm run lint
 ```
 
 ## Deployment
