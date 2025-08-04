@@ -5,12 +5,13 @@ services:
     volumes:
       - .:/app                   # Mount local source into container
       - /app/node_modules        # Prevent overwriting node_modules
-    # ports:
-    #   - "3001:3000"
+    ports:
+      - "3000:3000"             # Expose backend on host port 3000
     depends_on:
       - db
     environment:
       DATABASE_URL: postgres://postgres:password@db:5432/auction
+      PORT: 3000
 
   db:
     image: postgres:15
