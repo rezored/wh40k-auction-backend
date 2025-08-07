@@ -5,7 +5,13 @@ import { Bid } from '../bids/bids.entity';
 export enum AuctionStatus {
   ACTIVE = 'active',
   ENDED = 'ended',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+  SOLD = 'sold'
+}
+
+export enum SaleType {
+  AUCTION = 'auction',
+  DIRECT = 'direct'
 }
 
 export enum AuctionCategory {
@@ -49,6 +55,19 @@ export class Auction {
 
     @Column({
         type: 'enum',
+        enum: SaleType,
+        default: SaleType.AUCTION
+    })
+    saleType: SaleType;
+
+    @Column('decimal', { precision: 10, scale: 2, nullable: true })
+    minOffer: number;
+
+    @Column({ nullable: true })
+    offerExpiryDays: number;
+
+    @Column({
+        type: 'enum',
         enum: AuctionCategory,
         default: AuctionCategory.MINIATURES
     })
@@ -71,7 +90,7 @@ export class Auction {
     @CreateDateColumn()
     createdAt: Date;
 
-    @Column()
+    @Column({ nullable: true })
     endTime: Date;
 
     @UpdateDateColumn()

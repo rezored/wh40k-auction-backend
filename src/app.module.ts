@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { AuctionsModule } from './auctions/auctions.module';
 import { BidsModule } from './bids/bids.module';
+import { OffersModule } from './offers/offers.module';
 
 @Module({
     imports: [
@@ -18,7 +19,8 @@ import { BidsModule } from './bids/bids.module';
         UserModule,
         AuthModule,
         AuctionsModule,
-        BidsModule
+        BidsModule,
+        OffersModule
     ],
     controllers: [AppController],
     providers: [AppService],

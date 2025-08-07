@@ -18,12 +18,14 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 import { Auction, AuctionStatus, AuctionCategory, AuctionCondition } from './auctions.entity';
 import { Bid } from '../bids/bids.entity';
 import { BidsService } from '../bids/bids.service';
+import { OffersService } from '../offers/offers.service';
 
 @Controller('auctions')
 export class AuctionsController {
     constructor(
         private auctionsService: AuctionsService,
-        private bidsService: BidsService
+        private bidsService: BidsService,
+        private offersService: OffersService
     ) { }
 
     @Get()
@@ -78,7 +80,7 @@ export class AuctionsController {
     ): Promise<Auction> {
         const createAuctionRequest = {
             ...createAuctionDto,
-            endTime: new Date(createAuctionDto.endTime)
+            endTime: createAuctionDto.endTime ? new Date(createAuctionDto.endTime) : undefined
         };
         return this.auctionsService.createAuction(createAuctionRequest, req.user);
     }
@@ -119,6 +121,21 @@ export class AuctionsController {
         @Request() req
     ): Promise<Auction> {
         return this.auctionsService.cancelAuction(id, req.user);
+    }
+
+    @Post(':id/offers')
+    @UseGuards(JwtAuthGuard)
+    async createOfferOnAuction(
+        @Param('id', ParseIntPipe) auctionId: number,
+        @Body() body: { amount: number; message?: string },
+        @Request() req
+    ) {
+        return this.offersService.createOffer(
+            auctionId,
+            req.user,
+            body.amount,
+            body.message
+        );
     }
 
     @Post(':id/bids')

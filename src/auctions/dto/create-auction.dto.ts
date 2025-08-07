@@ -1,5 +1,5 @@
 import { IsString, IsNumber, IsEnum, IsDateString, IsOptional, Min, MaxLength } from 'class-validator';
-import { AuctionCategory, AuctionCondition } from '../auctions.entity';
+import { AuctionCategory, AuctionCondition, SaleType } from '../auctions.entity';
 
 export class CreateAuctionDto {
   @IsString()
@@ -25,10 +25,25 @@ export class CreateAuctionDto {
   @IsEnum(AuctionCondition)
   condition: AuctionCondition;
 
+  @IsOptional()
   @IsDateString()
-  endTime: string;
+  endTime?: string;
 
   @IsOptional()
   @IsString()
   imageUrl?: string;
+
+  @IsOptional()
+  @IsEnum(SaleType)
+  saleType?: SaleType;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minOffer?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  offerExpiryDays?: number;
 } 

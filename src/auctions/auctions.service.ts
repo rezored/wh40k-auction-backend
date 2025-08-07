@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindManyOptions } from 'typeorm';
-import { Auction, AuctionStatus, AuctionCategory, AuctionCondition } from './auctions.entity';
+import { Auction, AuctionStatus, AuctionCategory, AuctionCondition, SaleType } from './auctions.entity';
 import { User } from '../user/user.entity';
 import { Bid } from '../bids/bids.entity';
 
@@ -12,8 +12,11 @@ export interface CreateAuctionRequest {
   reservePrice?: number;
   category: AuctionCategory;
   condition: AuctionCondition;
-  endTime: Date;
+  endTime?: Date; // Made optional for direct sales
   imageUrl?: string;
+  saleType?: SaleType;
+  minOffer?: number;
+  offerExpiryDays?: number;
 }
 
 export interface UpdateAuctionRequest {
@@ -24,6 +27,9 @@ export interface UpdateAuctionRequest {
   condition?: AuctionCondition;
   endTime?: Date;
   imageUrl?: string;
+  saleType?: SaleType;
+  minOffer?: number;
+  offerExpiryDays?: number;
 }
 
 @Injectable()
@@ -38,7 +44,8 @@ export class AuctionsService {
       ...createAuctionDto,
       owner,
       currentPrice: createAuctionDto.startingPrice,
-      status: AuctionStatus.ACTIVE
+      status: AuctionStatus.ACTIVE,
+      saleType: createAuctionDto.saleType || SaleType.AUCTION
     });
 
     return this.repo.save(auction);
@@ -86,6 +93,10 @@ export class AuctionsService {
 
     Object.assign(auction, updateAuctionDto);
     return this.repo.save(auction);
+  }
+
+  async updateAuctionStatus(id: number, status: AuctionStatus): Promise<void> {
+    await this.repo.update(id, { status });
   }
 
   async deleteAuction(id: number, user: User): Promise<void> {
