@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BidsService } from './bids.service';
 import { BidsController } from './bids.controller';
+import { BidsService } from './bids.service';
 import { Bid } from './bids.entity';
+import { AuctionsModule } from '../auctions/auctions.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Bid])],
+  imports: [TypeOrmModule.forFeature([Bid]), AuctionsModule],
+  controllers: [BidsController],
   providers: [BidsService],
-  controllers: [BidsController]
+  exports: [BidsService],
 })
 export class BidsModule {}

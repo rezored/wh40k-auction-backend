@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { ListingsModule } from './listings/listings.module';
+import { AuctionsModule } from './auctions/auctions.module';
 import { BidsModule } from './bids/bids.module';
 
 @Module({
@@ -17,7 +17,7 @@ import { BidsModule } from './bids/bids.module';
         }),
         UserModule,
         AuthModule,
-        ListingsModule,
+        AuctionsModule,
         BidsModule
     ],
     controllers: [AppController],

@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Listing } from '../listings/listings.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
+import { Auction } from '../auctions/auctions.entity';
 import { User } from '../user/user.entity';
 
 @Entity()
@@ -7,15 +7,18 @@ export class Bid {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column()
+    @Column('decimal', { precision: 10, scale: 2 })
     amount: number;
 
     @ManyToOne(() => User, { eager: true })
     bidder: User;
 
-    @ManyToOne(() => Listing, { eager: true })
-    listing: Listing;
+    @ManyToOne(() => Auction, auction => auction.bids, { eager: true })
+    auction: Auction;
+
+    @CreateDateColumn()
+    createdAt: Date;
 
     @Column({ default: false })
-    accepted: boolean;
+    isWinningBid: boolean;
 }
