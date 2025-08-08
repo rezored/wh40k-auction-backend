@@ -1,29 +1,32 @@
 services:
   backend:
     build: .
-    command: npm run start:dev   # Enable hot reload
+    command: npm run start:dev # Enable hot reload
     volumes:
-      - .:/app                   # Mount local source into container
-      - /app/node_modules        # Prevent overwriting node_modules
+      - .:/app # Mount local source into container
+      - /app/node_modules # Prevent overwriting node_modules
     ports:
-      - "3000:3000"             # Expose backend on host port 3000
+      - "3000:3000" # Expose backend on host port 3000
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/auction
+      DATABASE_URL: postgres://wh40k_user:wh40k_password@db:5432/wh40k_auction
       PORT: 3000
+      NODE_ENV: development
+      JWT_SECRET: wh40k-super-secret-jwt-key-2024-change-this-in-production
+      CORS_ORIGINS: http://localhost:4200,http://localhost:3000
 
   db:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: auction
+      POSTGRES_USER: wh40k_user
+      POSTGRES_PASSWORD: wh40k_password
+      POSTGRES_DB: wh40k_auction
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Persistent volume for database data
+      - postgres_data:/var/lib/postgresql/data # Persistent volume for database data
 
 volumes:
-  postgres_data:  # Named volume for PostgreSQL data persistence
+  postgres_data: # Named volume for PostgreSQL data persistence

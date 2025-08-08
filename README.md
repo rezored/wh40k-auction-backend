@@ -45,47 +45,129 @@ For detailed API documentation, see [API_STYLE_GUIDE.md](./API_STYLE_GUIDE.md).
 - PostgreSQL database
 - Docker containerization
 
-## Project setup
+## Quick Start
+
+### Local Development (Docker - Recommended)
+
+```bash
+# Start the entire stack (database + backend)
+docker-compose up -d
+
+# Install dependencies in container
+docker-compose exec backend npm install
+
+# Access the API
+curl http://localhost:3000/api/v1
+```
+
+### Local Development (Manual)
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp env.example .env
+# Edit .env with your database credentials
+
+# Start development server
+npm run start:dev
+```
+
+## Project Setup
 
 ```bash
 $ npm install
 ```
 
-## Compile and run the project
+## Running the Project
 
+### Development Mode
 ```bash
-# development
-$ npm run start
+# Using Docker (recommended)
+docker-compose up -d
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Using local PostgreSQL
+npm run start:dev
 ```
 
-## Development
+### Production Mode
+```bash
+# Build the application
+npm run build
+
+# Start with PM2
+npm run pm2:start:prod
+
+# Or start directly
+npm run start:prod
+```
+
+## Development Tools
 
 ```bash
-# format code
-$ npm run format
+# Format code
+npm run format
 
-# lint code
-$ npm run lint
+# Lint code
+npm run lint
+
+# Watch for changes
+npm run watch
+```
+
+## PM2 Management
+
+```bash
+# Start the application
+npm run pm2:start:prod
+
+# Stop the application
+npm run pm2:stop
+
+# Restart the application
+npm run pm2:restart
+
+# Reload (zero-downtime)
+npm run pm2:reload
+
+# View logs
+npm run pm2:logs
+
+# Monitor
+npm run pm2:monit
 ```
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Local Development
+- Use Docker Compose for easy setup
+- Hot reload with `npm run start:dev`
+- Database included in Docker setup
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Production Deployment
+- Use PM2 for process management
+- See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions
+- Environment variables in `.env` file
+- PostgreSQL database required
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+### Deployment Options
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+1. **PM2 (Recommended for VPS/Server)**
+   ```bash
+   npm run pm2:start:prod
+   ```
+
+2. **Docker (Recommended for containers)**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Direct Node.js**
+   ```bash
+   npm run build
+   npm run start:prod
+   ```
 
 ## Resources
 

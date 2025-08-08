@@ -12,7 +12,7 @@ import { OffersModule } from './offers/offers.module';
     imports: [
         TypeOrmModule.forRoot({
             type: 'postgres',
-            url: process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/auction',
+            url: process.env.DATABASE_URL || 'postgres://wh40k_user:wh40k_password@localhost:5432/wh40k_auction',
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
             synchronize: process.env.NODE_ENV !== 'production', // Be careful with this in production
         }),
