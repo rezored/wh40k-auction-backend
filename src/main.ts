@@ -1,69 +1,61 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as express from 'express';
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-    // Enable CORS for frontend access
-    const corsOrigins = process.env.CORS_ORIGINS
-        ? process.env.CORS_ORIGINS.split(',')
-        : ['http://localhost:4200', 'http://localhost:3000'];
+    // Configure body parser limits for large requests (base64 images)
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+    // Enable CORS
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:4200'];
     app.enableCors({
         origin: corsOrigins,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
     });
+
+    // Serve static files for uploaded images
+    app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+        prefix: '/uploads/',
+    });
+
+    // Global validation pipe
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+    }));
+
+
 
     // Set global prefix for API versioning
     app.setGlobalPrefix('api/v1');
 
-    const port = process.env.PORT ?? 3000;
-    const nodeEnv = process.env.NODE_ENV ?? 'development';
+    // Log environment and startup time
+    console.log(`🚀 Starting server in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`⏰ Startup time: ${new Date().toISOString()}`);
 
+    const port = process.env.PORT || 3000;
     await app.listen(port);
-
-    console.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
-    console.log(`🌍 Environment: ${nodeEnv}`);
-    console.log(`📅 Started at: ${new Date().toISOString()}`);
-
-    // Log all routes on startup (after app is listening)
-    try {
-        const server = app.getHttpServer();
-        const router = server._events.request._router;
-
-        console.log('\n📋 Available Routes:');
-        if (router && router.stack) {
-            let routeCount = 0;
-            router.stack.forEach((layer) => {
-                if (layer.route) {
-                    const path = layer.route?.path;
-                    const method = Object.keys(layer.route.methods)[0];
-                    console.log(`  ${method.toUpperCase()} /api/v1${path}`);
-                    routeCount++;
-                }
-            });
-            console.log(`\n✅ Total routes registered: ${routeCount}`);
-        } else {
-            console.log('  (Routes will be available after first request)');
-        }
-        console.log('');
-    } catch (error) {
-        console.log('⚠️  Could not log routes:', error.message);
-    }
-
-    // Graceful shutdown handling
-    process.on('SIGTERM', async () => {
-        console.log('🛑 SIGTERM received, shutting down gracefully...');
-        await app.close();
-        process.exit(0);
-    });
-
-    process.on('SIGINT', async () => {
-        console.log('🛑 SIGINT received, shutting down gracefully...');
-        await app.close();
-        process.exit(0);
-    });
+    console.log(`🎯 Server running on port ${port}`);
+    console.log(`📁 Static files served from /uploads/`);
+    console.log(`🌐 API available at: http://localhost:${port}/api/v1`);
 }
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('🛑 SIGINT received, shutting down gracefully');
+    process.exit(0);
+});
+
 bootstrap();

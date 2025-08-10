@@ -4,6 +4,9 @@ import { Repository, FindManyOptions } from 'typeorm';
 import { Auction, AuctionStatus, AuctionCategory, AuctionCondition, SaleType } from './auctions.entity';
 import { User } from '../user/user.entity';
 import { Bid } from '../bids/bids.entity';
+import { AuctionImage, ImageStatus } from './auction-image.entity';
+import { CreateAuctionEnhancedDto } from './dto/create-auction-enhanced.dto';
+import { AuctionResponseDto, AuctionListResponseDto, SafeUserDto } from './dto/auction-response.dto';
 
 export interface CreateAuctionRequest {
   title: string;
@@ -17,6 +20,28 @@ export interface CreateAuctionRequest {
   saleType?: SaleType;
   minOffer?: number;
   offerExpiryDays?: number;
+  categoryGroup?: string;
+  era?: string;
+  scale?: string;
+  tags?: string[];
+}
+
+export interface CreateAuctionEnhancedRequest extends CreateAuctionRequest {
+  images: {
+    url: string;
+    thumbnailUrl: string;
+    filename: string;
+    originalFilename: string;
+    fileSize: number;
+    mimeType: string;
+    width: number;
+    height: number;
+    altText?: string;
+  }[];
+  categoryGroup?: string;
+  era?: string;
+  scale?: string;
+  tags?: string[];
 }
 
 export interface UpdateAuctionRequest {
@@ -30,16 +55,80 @@ export interface UpdateAuctionRequest {
   saleType?: SaleType;
   minOffer?: number;
   offerExpiryDays?: number;
+  categoryGroup?: string;
+  era?: string;
+  scale?: string;
+  tags?: string[];
 }
 
 @Injectable()
 export class AuctionsService {
   constructor(
     @InjectRepository(Auction) private repo: Repository<Auction>,
-    @InjectRepository(Bid) private bidRepo: Repository<Bid>
-  ) {}
+    @InjectRepository(Bid) private bidRepo: Repository<Bid>,
+    @InjectRepository(AuctionImage) private imageRepo: Repository<AuctionImage>
+  ) { }
 
-  async createAuction(createAuctionDto: CreateAuctionRequest, owner: User): Promise<Auction> {
+  private transformToSafeUser(user: User): SafeUserDto {
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username
+    };
+  }
+
+  private transformToSafeAuction(auction: Auction): AuctionResponseDto {
+    return {
+      id: auction.id,
+      title: auction.title,
+      description: auction.description,
+      imageUrl: auction.imageUrl,
+      images: auction.images || [],
+      startingPrice: auction.startingPrice,
+      currentPrice: auction.currentPrice,
+      reservePrice: auction.reservePrice,
+      saleType: auction.saleType,
+      minOffer: auction.minOffer,
+      offerExpiryDays: auction.offerExpiryDays,
+      category: auction.category,
+      condition: auction.condition,
+      categoryGroup: auction.categoryGroup,
+      era: auction.era,
+      scale: auction.scale,
+      tags: auction.tags,
+      status: auction.status,
+      createdAt: auction.createdAt,
+      endTime: auction.endTime,
+      updatedAt: auction.updatedAt,
+      owner: this.transformToSafeUser(auction.owner),
+      bids: auction.bids || []
+    };
+  }
+
+  private transformToSafeAuctionList(auction: Auction): AuctionListResponseDto {
+    return {
+      id: auction.id,
+      title: auction.title,
+      description: auction.description,
+      imageUrl: auction.imageUrl,
+      images: auction.images || [],
+      startingPrice: auction.startingPrice,
+      currentPrice: auction.currentPrice,
+      category: auction.category,
+      condition: auction.condition,
+      categoryGroup: auction.categoryGroup,
+      era: auction.era,
+      scale: auction.scale,
+      tags: auction.tags,
+      status: auction.status,
+      createdAt: auction.createdAt,
+      endTime: auction.endTime,
+      owner: this.transformToSafeUser(auction.owner),
+      bidCount: auction.bids ? auction.bids.length : 0
+    };
+  }
+
+  async createAuction(createAuctionDto: CreateAuctionRequest, owner: User): Promise<AuctionResponseDto> {
     const auction = this.repo.create({
       ...createAuctionDto,
       owner,
@@ -48,26 +137,67 @@ export class AuctionsService {
       saleType: createAuctionDto.saleType || SaleType.AUCTION
     });
 
-    return this.repo.save(auction);
+    const savedAuction = await this.repo.save(auction);
+    return this.transformToSafeAuction(savedAuction);
   }
 
-  async findAll(options?: FindManyOptions<Auction>): Promise<Auction[]> {
-    return this.repo.find({
+  async createAuctionEnhanced(createAuctionDto: CreateAuctionEnhancedRequest, owner: User): Promise<AuctionResponseDto> {
+    // Create the auction first
+    const auction = this.repo.create({
+      ...createAuctionDto,
+      owner,
+      currentPrice: createAuctionDto.startingPrice,
+      status: AuctionStatus.ACTIVE,
+      saleType: createAuctionDto.saleType || SaleType.AUCTION
+    });
+
+    const savedAuction = await this.repo.save(auction);
+
+    // Create auction images
+    if (createAuctionDto.images && createAuctionDto.images.length > 0) {
+      const images = createAuctionDto.images.map((imageData, index) => {
+        return this.imageRepo.create({
+          auctionId: savedAuction.id,
+          filename: imageData.filename,
+          originalFilename: imageData.originalFilename,
+          url: imageData.url,
+          thumbnailUrl: imageData.thumbnailUrl,
+          fileSize: imageData.fileSize,
+          mimeType: imageData.mimeType,
+          width: imageData.width,
+          height: imageData.height,
+          isMain: index === 0, // First image is main
+          order: index,
+          status: ImageStatus.ACTIVE,
+          altText: imageData.altText
+        });
+      });
+
+      await this.imageRepo.save(images);
+    }
+
+    return this.transformToSafeAuction(savedAuction);
+  }
+
+  async findAll(options?: FindManyOptions<Auction>): Promise<AuctionListResponseDto[]> {
+    const auctions = await this.repo.find({
       ...options,
-      relations: ['owner', 'bids', 'bids.bidder'],
-      order: { createdAt: 'DESC' }
+      relations: ['owner', 'bids', 'images']
     });
+
+    return auctions.map(auction => this.transformToSafeAuctionList(auction));
   }
 
-  async findActiveAuctions(): Promise<Auction[]> {
-    return this.repo.find({
+  async findActiveAuctions(): Promise<AuctionListResponseDto[]> {
+    const auctions = await this.repo.find({
       where: { status: AuctionStatus.ACTIVE },
-      relations: ['owner', 'bids', 'bids.bidder'],
-      order: { endTime: 'ASC' }
+      relations: ['owner', 'bids', 'images']
     });
+
+    return auctions.map(auction => this.transformToSafeAuctionList(auction));
   }
 
-  async findById(id: number): Promise<Auction> {
+  async findById(id: number): Promise<AuctionResponseDto> {
     const auction = await this.repo.findOne({
       where: { id },
       relations: ['owner', 'bids', 'bids.bidder']
@@ -77,11 +207,18 @@ export class AuctionsService {
       throw new NotFoundException('Auction not found');
     }
 
-    return auction;
+    return this.transformToSafeAuction(auction);
   }
 
-  async updateAuction(id: number, updateAuctionDto: UpdateAuctionRequest, user: User): Promise<Auction> {
-    const auction = await this.findById(id);
+  async updateAuction(id: number, updateAuctionDto: UpdateAuctionRequest, user: User): Promise<AuctionResponseDto> {
+    const auction = await this.repo.findOne({
+      where: { id },
+      relations: ['owner', 'bids', 'bids.bidder', 'images']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
 
     if (auction.owner.id !== user.id) {
       throw new ForbiddenException('You can only update your own auctions');
@@ -92,7 +229,8 @@ export class AuctionsService {
     }
 
     Object.assign(auction, updateAuctionDto);
-    return this.repo.save(auction);
+    const updatedAuction = await this.repo.save(auction);
+    return this.transformToSafeAuction(updatedAuction);
   }
 
   async updateAuctionStatus(id: number, status: AuctionStatus): Promise<void> {
@@ -100,7 +238,14 @@ export class AuctionsService {
   }
 
   async deleteAuction(id: number, user: User): Promise<void> {
-    const auction = await this.findById(id);
+    const auction = await this.repo.findOne({
+      where: { id },
+      relations: ['owner', 'bids']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
 
     if (auction.owner.id !== user.id) {
       throw new ForbiddenException('You can only delete your own auctions');
@@ -113,35 +258,67 @@ export class AuctionsService {
     await this.repo.remove(auction);
   }
 
-  async endAuction(id: number, user: User): Promise<Auction> {
-    const auction = await this.findById(id);
+  async endAuction(id: number, user: User): Promise<AuctionResponseDto> {
+    const auction = await this.repo.findOne({
+      where: { id },
+      relations: ['owner', 'bids', 'bids.bidder', 'images']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
 
     if (auction.owner.id !== user.id) {
       throw new ForbiddenException('You can only end your own auctions');
     }
 
     auction.status = AuctionStatus.ENDED;
-    return this.repo.save(auction);
+    const endedAuction = await this.repo.save(auction);
+    return this.transformToSafeAuction(endedAuction);
   }
 
-  async cancelAuction(id: number, user: User): Promise<Auction> {
-    const auction = await this.findById(id);
+  async cancelAuction(id: number, user: User): Promise<AuctionResponseDto> {
+    const auction = await this.repo.findOne({
+      where: { id },
+      relations: ['owner', 'bids', 'bids.bidder', 'images']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
 
     if (auction.owner.id !== user.id) {
       throw new ForbiddenException('You can only cancel your own auctions');
     }
 
     auction.status = AuctionStatus.CANCELLED;
-    return this.repo.save(auction);
+    const cancelledAuction = await this.repo.save(auction);
+    return this.transformToSafeAuction(cancelledAuction);
   }
 
   async getAuctionBids(id: number): Promise<Bid[]> {
-    const auction = await this.findById(id);
+    const auction = await this.repo.findOne({
+      where: { id },
+      relations: ['bids', 'bids.bidder']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
+
     return auction.bids.sort((a, b) => b.amount - a.amount);
   }
 
   async getWinningBid(auctionId: number): Promise<Bid | null> {
-    const auction = await this.findById(auctionId);
+    const auction = await this.repo.findOne({
+      where: { id: auctionId },
+      relations: ['bids']
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
+
     const winningBid = auction.bids.find(bid => bid.isWinningBid);
     return winningBid || null;
   }
@@ -157,7 +334,7 @@ export class AuctionsService {
     });
 
     const now = new Date();
-    
+
     for (const auction of activeAuctions) {
       if (auction.endTime <= now) {
         auction.status = AuctionStatus.ENDED;

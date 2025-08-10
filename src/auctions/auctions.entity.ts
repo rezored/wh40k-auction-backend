@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Bid } from '../bids/bids.entity';
+import { AuctionImage } from './auction-image.entity';
 
 export enum AuctionStatus {
   ACTIVE = 'active',
@@ -19,7 +20,11 @@ export enum AuctionCategory {
   BOOKS = 'books',
   TERRAIN = 'terrain',
   PAINTS = 'paints',
-  ACCESSORIES = 'accessories'
+  ACCESSORIES = 'accessories',
+  WARHAMMER_40K = 'warhammer-40k',
+  FANTASY_SCI_FI = 'fantasy-sci-fi',
+  BOARD_GAMES = 'board-games',
+  COLLECTIBLES = 'collectibles'
 }
 
 export enum AuctionCondition {
@@ -32,73 +37,91 @@ export enum AuctionCondition {
 
 @Entity()
 export class Auction {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column()
-    title: string;
+  @Column()
+  title: string;
 
-    @Column('text')
-    description: string;
+  @Column('text')
+  description: string;
 
-    @Column({ nullable: true })
-    imageUrl: string;
+  @Column({ nullable: true })
+  imageUrl: string; // Legacy field - will be deprecated
 
-    @Column('decimal', { precision: 10, scale: 2 })
-    startingPrice: number;
+  @OneToMany(() => AuctionImage, image => image.auction, {
+    cascade: true,
+    eager: true
+  })
+  images: AuctionImage[];
 
-    @Column('decimal', { precision: 10, scale: 2, nullable: true })
-    currentPrice: number;
+  @Column('decimal', { precision: 10, scale: 2 })
+  startingPrice: number;
 
-    @Column('decimal', { precision: 10, scale: 2, nullable: true })
-    reservePrice: number;
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  currentPrice: number;
 
-    @Column({
-        type: 'enum',
-        enum: SaleType,
-        default: SaleType.AUCTION
-    })
-    saleType: SaleType;
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  reservePrice: number;
 
-    @Column('decimal', { precision: 10, scale: 2, nullable: true })
-    minOffer: number;
+  @Column({
+    type: 'enum',
+    enum: SaleType,
+    default: SaleType.AUCTION
+  })
+  saleType: SaleType;
 
-    @Column({ nullable: true })
-    offerExpiryDays: number;
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  minOffer: number;
 
-    @Column({
-        type: 'enum',
-        enum: AuctionCategory,
-        default: AuctionCategory.MINIATURES
-    })
-    category: AuctionCategory;
+  @Column({ nullable: true })
+  offerExpiryDays: number;
 
-    @Column({
-        type: 'enum',
-        enum: AuctionCondition,
-        default: AuctionCondition.GOOD
-    })
-    condition: AuctionCondition;
+  @Column({
+    type: 'enum',
+    enum: AuctionCategory,
+    default: AuctionCategory.MINIATURES
+  })
+  category: AuctionCategory;
 
-    @Column({
-        type: 'enum',
-        enum: AuctionStatus,
-        default: AuctionStatus.ACTIVE
-    })
-    status: AuctionStatus;
+  @Column({
+    type: 'enum',
+    enum: AuctionCondition,
+    default: AuctionCondition.GOOD
+  })
+  condition: AuctionCondition;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @Column({ nullable: true })
+  categoryGroup?: string;
 
-    @Column({ nullable: true })
-    endTime: Date;
+  @Column({ nullable: true })
+  era?: string;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @Column({ nullable: true })
+  scale?: string;
 
-    @ManyToOne(() => User, { eager: true })
-    owner: User;
+  @Column('simple-array', { nullable: true })
+  tags?: string[];
 
-    @OneToMany(() => Bid, bid => bid.auction, { cascade: true })
-    bids: Bid[];
+  @Column({
+    type: 'enum',
+    enum: AuctionStatus,
+    default: AuctionStatus.ACTIVE
+  })
+  status: AuctionStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @Column({ nullable: true })
+  endTime: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @ManyToOne(() => User)
+  owner: User;
+
+  @OneToMany(() => Bid, bid => bid.auction, { cascade: true })
+  bids: Bid[];
 } 

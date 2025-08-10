@@ -22,7 +22,7 @@ export class BidsService {
         }
 
         // Check if auction has ended
-        if (auction.endTime <= new Date()) {
+        if (auction.endTime && auction.endTime <= new Date()) {
             throw new BadRequestException('Auction has ended');
         }
 

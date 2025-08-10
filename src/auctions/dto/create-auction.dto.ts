@@ -1,4 +1,5 @@
-import { IsString, IsNumber, IsEnum, IsDateString, IsOptional, Min, MaxLength } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsDateString, IsOptional, Min, MaxLength, IsArray } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { AuctionCategory, AuctionCondition, SaleType } from '../auctions.entity';
 
 export class CreateAuctionDto {
@@ -12,15 +13,23 @@ export class CreateAuctionDto {
 
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
+  @Transform(({ value }) => typeof value === 'string' ? parseFloat(value) : value)
   startingPrice: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
+  @Transform(({ value }) => typeof value === 'string' ? parseFloat(value) : value)
   reservePrice?: number;
 
   @IsEnum(AuctionCategory)
   category: AuctionCategory;
+
+  @IsOptional()
+  @IsString()
+  categoryGroup?: string;
 
   @IsEnum(AuctionCondition)
   condition: AuctionCondition;
@@ -40,10 +49,27 @@ export class CreateAuctionDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
+  @Transform(({ value }) => typeof value === 'string' ? parseFloat(value) : value)
   minOffer?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(1)
+  @Type(() => Number)
+  @Transform(({ value }) => typeof value === 'string' ? parseFloat(value) : value)
   offerExpiryDays?: number;
+
+  @IsOptional()
+  @IsString()
+  era?: string;
+
+  @IsOptional()
+  @IsString()
+  scale?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 } 

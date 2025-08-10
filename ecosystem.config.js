@@ -8,7 +8,7 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 PORT: 3000,
-                DATABASE_URL: process.env.DATABASE_URL || 'postgres://wh40k_user:wh40k_password@localhost:5432/wh40k_auction'
+                DATABASE_URL: process.env.DATABASE_URL || 'postgres://wh40k_user:wh40k_password_2024@127.0.0.1:5432/wh40k_auction'
             },
             env_production: {
                 NODE_ENV: 'production',
@@ -18,7 +18,7 @@ module.exports = {
             env_development: {
                 NODE_ENV: 'development',
                 PORT: 3000,
-                DATABASE_URL: process.env.DATABASE_URL || 'postgres://wh40k_user:wh40k_password@localhost:5432/wh40k_auction'
+                DATABASE_URL: process.env.DATABASE_URL || 'postgres://wh40k_user:wh40k_password_2024@127.0.0.1:5432/wh40k_auction'
             },
             // Logging
             log_file: './logs/combined.log',
