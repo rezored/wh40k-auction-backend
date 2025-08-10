@@ -122,6 +122,15 @@ export class AuctionFiltersDto {
     show_own?: boolean; // Backward compatibility
 
     @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return undefined;
+    })
+    @IsBoolean()
+    excludeSold?: boolean; // Exclude sold auctions from main listings
+
+    @IsOptional()
     @IsString()
     search?: string;
 

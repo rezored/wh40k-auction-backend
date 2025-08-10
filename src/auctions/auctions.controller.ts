@@ -58,6 +58,14 @@ export class AuctionsController {
             console.log(`🎯 GET /auctions - User ID: ${currentUser.id}`);
         }
 
+        // Set default excludeSold to true for main auction listings
+        if (filters.excludeSold === undefined) {
+            filters.excludeSold = true;
+            console.log(`🔍 excludeSold filter set to default: true (main listings)`);
+        } else {
+            console.log(`🔍 excludeSold filter: ${filters.excludeSold}`);
+        }
+
         // Handle both showOwn and show_own parameters for backward compatibility
         const shouldShowOwn = filters.showOwn || filters.show_own;
 
@@ -88,6 +96,13 @@ export class AuctionsController {
     ): Promise<PaginatedAuctionsResponseDto> {
         // Force status to ACTIVE for this endpoint
         filters.status = AuctionStatus.ACTIVE;
+
+        // Set default excludeSold to true for active auctions (main listings)
+        if (filters.excludeSold === undefined) {
+            filters.excludeSold = true;
+            console.log(`🔍 excludeSold filter set to default: true (active auctions)`);
+        }
+
         const currentUser = req.user || null;
 
         return this.auctionsService.getAuctionsWithFilters(filters, currentUser);
@@ -99,6 +114,10 @@ export class AuctionsController {
         @Query() filters: AuctionFiltersDto,
         @Request() req
     ): Promise<PaginatedAuctionsResponseDto> {
+        // For "My Auctions" section, always include sold auctions
+        filters.excludeSold = false;
+        console.log(`🔍 excludeSold filter set to false for My Auctions section`);
+
         return this.auctionsService.getMyAuctions(req.user, filters);
     }
 
@@ -198,6 +217,15 @@ export class AuctionsController {
         @Request() req
     ): Promise<AuctionResponseDto> {
         return this.auctionsService.cancelAuction(id, req.user);
+    }
+
+    @Post(':id/mark-sold')
+    @UseGuards(JwtAuthGuard)
+    async markAuctionAsSold(
+        @Param('id', ParseIntPipe) id: number,
+        @Request() req
+    ): Promise<AuctionResponseDto> {
+        return this.auctionsService.markAuctionAsSold(id, req.user);
     }
 
     @Post(':id/offers')

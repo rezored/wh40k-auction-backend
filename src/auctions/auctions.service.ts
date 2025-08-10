@@ -241,6 +241,12 @@ export class AuctionsService {
             console.log('⚠️ showOwn filter requested but no user authenticated');
         }
 
+        // Exclude sold auctions filter - CRITICAL NEW LOGIC
+        if (filters.excludeSold === true) {
+            console.log('🔍 Excluding sold auctions from results');
+            queryBuilder.andWhere('auction.status != :soldStatus', { soldStatus: AuctionStatus.SOLD });
+        }
+
         // Search filter (searches in title and description)
         if (filters.search) {
             queryBuilder.andWhere(
@@ -482,6 +488,28 @@ export class AuctionsService {
         await this.repo.update(id, { status });
     }
 
+    async markAuctionAsSold(id: number, user: User): Promise<AuctionResponseDto> {
+        const auction = await this.repo.findOne({
+            where: { id },
+            relations: ['owner', 'bids', 'bids.bidder', 'images']
+        });
+
+        if (!auction) {
+            throw new NotFoundException('Auction not found');
+        }
+
+        if (auction.owner.id !== user.id) {
+            throw new ForbiddenException('You can only mark your own auctions as sold');
+        }
+
+        auction.status = AuctionStatus.SOLD;
+        const soldAuction = await this.repo.save(auction);
+
+        console.log(`🏆 Auction ${auction.id} marked as SOLD by owner`);
+
+        return this.transformToSafeAuction(soldAuction);
+    }
+
     async deleteAuction(id: number, user: User): Promise<void> {
         const auction = await this.repo.findOne({
             where: { id },
@@ -517,7 +545,15 @@ export class AuctionsService {
             throw new ForbiddenException('You can only end your own auctions');
         }
 
-        auction.status = AuctionStatus.ENDED;
+        // Check if auction has bids - if yes, mark as SOLD, otherwise as ENDED
+        if (auction.bids && auction.bids.length > 0) {
+            auction.status = AuctionStatus.SOLD;
+            console.log(`🏆 Auction ${auction.id} manually ended as SOLD - has ${auction.bids.length} bids`);
+        } else {
+            auction.status = AuctionStatus.ENDED;
+            console.log(`⏰ Auction ${auction.id} manually ended as ENDED - no bids`);
+        }
+
         const endedAuction = await this.repo.save(auction);
 
         // Send notifications
@@ -586,7 +622,14 @@ export class AuctionsService {
 
         for (const auction of activeAuctions) {
             if (auction.endTime <= now) {
-                auction.status = AuctionStatus.ENDED;
+                // Check if auction has bids - if yes, mark as SOLD, otherwise as ENDED
+                if (auction.bids && auction.bids.length > 0) {
+                    auction.status = AuctionStatus.SOLD;
+                    console.log(`🏆 Auction ${auction.id} marked as SOLD - has ${auction.bids.length} bids`);
+                } else {
+                    auction.status = AuctionStatus.ENDED;
+                    console.log(`⏰ Auction ${auction.id} marked as ENDED - no bids`);
+                }
                 await this.repo.save(auction);
             }
         }
