@@ -15,7 +15,7 @@ import { Offer } from './offers.entity';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { RespondOfferDto } from './dto/respond-offer.dto';
 
-@Controller('offers')
+@Controller('api/v1/offers')
 export class OffersController {
     constructor(private offersService: OffersService) { }
 
@@ -76,5 +76,26 @@ export class OffersController {
     @UseGuards(JwtAuthGuard)
     async getOfferById(@Param('offerId') offerId: string): Promise<Offer> {
         return this.offersService.getOfferById(offerId);
+    }
+
+    // Enhanced Offer Endpoints
+    @Post(':offerId/accept-with-address')
+    @UseGuards(JwtAuthGuard)
+    async acceptOfferWithAddress(
+        @Param('offerId') offerId: string,
+        @Body() body: { response: 'accept'; shippingAddress: any },
+        @Request() req
+    ): Promise<{ offer: Offer; message: string }> {
+        return this.offersService.acceptOfferWithAddress(offerId, req.user, body.shippingAddress);
+    }
+
+    @Post(':offerId/notify-accepted')
+    @UseGuards(JwtAuthGuard)
+    async notifyOfferAccepted(
+        @Param('offerId') offerId: string,
+        @Body() acceptanceData: any,
+        @Request() req
+    ): Promise<any> {
+        return this.offersService.notifyOfferAccepted(offerId, acceptanceData, req.user);
     }
 }

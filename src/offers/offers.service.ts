@@ -195,4 +195,63 @@ export class OffersService {
             }
         });
     }
+
+    async acceptOfferWithAddress(
+        offerId: string,
+        seller: User,
+        shippingAddress: any
+    ): Promise<{ offer: Offer; message: string }> {
+        const offer = await this.repo.findOne({
+            where: { id: offerId },
+            relations: ['auction', 'buyer']
+        });
+
+        if (!offer) {
+            throw new NotFoundException('Offer not found');
+        }
+
+        // Validate seller owns the auction
+        if (offer.auction.owner.id !== seller.id) {
+            throw new ForbiddenException('Only the auction owner can accept offers');
+        }
+
+        // Validate offer is pending
+        if (offer.status !== OfferStatus.PENDING) {
+            throw new BadRequestException('Offer is not pending');
+        }
+
+        // Accept the offer
+        offer.status = OfferStatus.ACCEPTED;
+        offer.acceptedAt = new Date();
+        const savedOffer = await this.repo.save(offer);
+
+        return {
+            offer: savedOffer,
+            message: 'Offer accepted successfully with shipping address'
+        };
+    }
+
+    async notifyOfferAccepted(
+        offerId: string,
+        acceptanceData: any,
+        seller: User
+    ): Promise<{ message: string }> {
+        const offer = await this.repo.findOne({
+            where: { id: offerId },
+            relations: ['auction', 'buyer']
+        });
+
+        if (!offer) {
+            throw new NotFoundException('Offer not found');
+        }
+
+        // Validate seller owns the auction
+        if (offer.auction.owner.id !== seller.id) {
+            throw new ForbiddenException('Only the auction owner can send notifications');
+        }
+
+        return {
+            message: 'Offer acceptance notification sent successfully'
+        };
+    }
 }

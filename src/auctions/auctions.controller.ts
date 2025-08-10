@@ -34,7 +34,7 @@ import { OffersService } from '../offers/offers.service';
 import { ImageService } from './image.service';
 import { ImageReorderRequestDto } from './dto/image-upload.dto';
 
-@Controller('auctions')
+@Controller('api/v1/auctions')
 export class AuctionsController {
     constructor(
         private auctionsService: AuctionsService,
@@ -58,8 +58,11 @@ export class AuctionsController {
             console.log(`🎯 GET /auctions - User ID: ${currentUser.id}`);
         }
 
+        // Handle both showOwn and show_own parameters for backward compatibility
+        const shouldShowOwn = filters.showOwn || filters.show_own;
+
         // If showOwn is requested but user is not authenticated, throw error
-        if (filters.showOwn && !currentUser) {
+        if (shouldShowOwn && !currentUser) {
             console.log('❌ showOwn requested without authentication');
             throw new UnauthorizedException({
                 message: 'Authentication required to view your own auctions',
@@ -68,7 +71,13 @@ export class AuctionsController {
             });
         }
 
-        return this.auctionsService.getAuctionsWithFilters(filters, currentUser);
+        // Update filters to use the standardized showOwn property
+        const normalizedFilters = {
+            ...filters,
+            showOwn: shouldShowOwn
+        };
+
+        return this.auctionsService.getAuctionsWithFilters(normalizedFilters, currentUser);
     }
 
     @Get('active')
@@ -312,5 +321,37 @@ export class AuctionsController {
     async getAuctionImages(@Param('auctionId', ParseIntPipe) auctionId: number) {
         const images = await this.imageService.getAuctionImages(auctionId);
         return { images };
+    }
+
+    // Enhanced Auction Endpoints
+    @Get(':auctionId/winner')
+    @UseGuards(JwtAuthGuard)
+    async getAuctionWinner(@Param('auctionId', ParseIntPipe) auctionId: number) {
+        return this.auctionsService.getAuctionWinner(auctionId);
+    }
+
+    @Get(':auctionId/winner-address')
+    @UseGuards(JwtAuthGuard)
+    async getWinnerAddress(@Param('auctionId', ParseIntPipe) auctionId: number) {
+        return this.auctionsService.getWinnerAddress(auctionId);
+    }
+
+    @Get(':auctionId/shipping/:userId')
+    @UseGuards(JwtAuthGuard)
+    async getShippingInformation(
+        @Param('auctionId', ParseIntPipe) auctionId: number,
+        @Param('userId', ParseIntPipe) userId: number
+    ) {
+        return this.auctionsService.getShippingInformation(auctionId, userId);
+    }
+
+    @Post(':auctionId/notify-winner')
+    @UseGuards(JwtAuthGuard)
+    async notifyAuctionWinner(
+        @Param('auctionId', ParseIntPipe) auctionId: number,
+        @Body() winnerData: any,
+        @Request() req
+    ) {
+        return this.auctionsService.notifyAuctionWinner(auctionId, winnerData, req.user);
     }
 } 

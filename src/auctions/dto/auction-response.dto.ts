@@ -99,9 +99,22 @@ export class AuctionFiltersDto {
     priceRange?: string; // For frontend compatibility
 
     @IsOptional()
-    @Transform(({ value }) => value === 'true')
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return undefined;
+    })
     @IsBoolean()
     showOwn?: boolean;
+
+    @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return undefined;
+    })
+    @IsBoolean()
+    show_own?: boolean; // Backward compatibility
 
     @IsOptional()
     @IsString()

@@ -11,40 +11,43 @@ export enum OfferStatus {
 
 @Entity()
 export class Offer {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column()
-    auctionId: number;
+  @Column()
+  auctionId: number;
 
-    @Column()
-    buyerId: number;
+  @Column()
+  buyerId: number;
 
-    @Column('decimal', { precision: 10, scale: 2 })
-    amount: number;
+  @Column('decimal', { precision: 10, scale: 2 })
+  amount: number;
 
-    @Column('text', { nullable: true })
-    message: string;
+  @Column('text', { nullable: true })
+  message: string;
 
-    @Column({
-        type: 'enum',
-        enum: OfferStatus,
-        default: OfferStatus.PENDING
-    })
-    status: OfferStatus;
+  @Column({
+    type: 'enum',
+    enum: OfferStatus,
+    default: OfferStatus.PENDING
+  })
+  status: OfferStatus;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 
-    @Column({ nullable: true })
-    expiresAt: Date;
+  @Column({ nullable: true })
+  expiresAt: Date;
 
-    @ManyToOne(() => User, { eager: true })
-    buyer: User;
+  @Column({ nullable: true })
+  acceptedAt: Date;
 
-    @ManyToOne(() => Auction, { eager: true })
-    auction: Auction;
+  @ManyToOne(() => User, { eager: true })
+  buyer: User;
+
+  @ManyToOne(() => Auction, { eager: true })
+  auction: Auction;
 }

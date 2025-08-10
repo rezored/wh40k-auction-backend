@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuctionsModule } from './auctions/auctions.module';
 import { BidsModule } from './bids/bids.module';
 import { OffersModule } from './offers/offers.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
     imports: [
@@ -27,7 +28,8 @@ import { OffersModule } from './offers/offers.module';
         AuthModule,
         AuctionsModule,
         BidsModule,
-        OffersModule
+        OffersModule,
+        NotificationsModule
     ],
     controllers: [AppController],
     providers: [
