@@ -8,6 +8,7 @@ import { AuctionImage, ImageStatus } from './auction-image.entity';
 import { CreateAuctionEnhancedDto } from './dto/create-auction-enhanced.dto';
 import { AuctionResponseDto, AuctionListResponseDto, SafeUserDto, AuctionFiltersDto, PaginatedAuctionsResponseDto } from './dto/auction-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Offer, OfferStatus } from '../offers/offers.entity';
 
 export interface CreateAuctionRequest {
     title: string;
@@ -68,6 +69,7 @@ export class AuctionsService {
         @InjectRepository(Auction) private repo: Repository<Auction>,
         @InjectRepository(Bid) private bidRepo: Repository<Bid>,
         @InjectRepository(AuctionImage) private imageRepo: Repository<AuctionImage>,
+        @InjectRepository(Offer) private offerRepo: Repository<Offer>,
         private notificationsService: NotificationsService
     ) { }
 
@@ -116,6 +118,10 @@ export class AuctionsService {
             images: auction.images || [],
             startingPrice: auction.startingPrice,
             currentPrice: auction.currentPrice,
+            reservePrice: auction.reservePrice,
+            saleType: auction.saleType,
+            minOffer: auction.minOffer,
+            offerExpiryDays: auction.offerExpiryDays,
             category: auction.category,
             condition: auction.condition,
             categoryGroup: auction.categoryGroup,
@@ -270,7 +276,101 @@ export class AuctionsService {
             ...filters,
             showOwn: true
         };
-        return this.getAuctionsWithFilters(myFilters, user);
+
+        // Get auctions first
+        const auctionsResponse = await this.getAuctionsWithFilters(myFilters, user);
+
+        // Get all offers (not just pending) for all user's auctions
+        const allOffers = await this.offerRepo.find({
+            where: {
+                auction: {
+                    owner: { id: user.id }
+                }
+            },
+            relations: ['auction', 'buyer'],
+            order: {
+                createdAt: 'DESC'
+            }
+        });
+
+        // Group offers by auction ID
+        const offersByAuction = allOffers.reduce((acc, offer) => {
+            if (!acc[offer.auctionId]) {
+                acc[offer.auctionId] = [];
+            }
+            acc[offer.auctionId].push({
+                id: offer.id,
+                amount: offer.amount,
+                status: offer.status,
+                createdAt: offer.createdAt,
+                message: offer.message,
+                buyer: {
+                    id: offer.buyer.id,
+                    username: offer.buyer.username,
+                    firstName: offer.buyer.firstName
+                }
+            });
+            return acc;
+        }, {});
+
+        // Add offers to each auction
+        const auctionsWithOffers = auctionsResponse.auctions.map(auction => ({
+            ...auction,
+            offers: offersByAuction[auction.id] || []
+        }));
+
+        return {
+            ...auctionsResponse,
+            auctions: auctionsWithOffers
+        };
+    }
+
+    async getMyAuctionsWithOffers(user: User, filters?: AuctionFiltersDto): Promise<any> {
+        // Get auctions first
+        const auctionsResponse = await this.getMyAuctions(user, filters);
+
+        // Get pending offers for all user's auctions
+        const pendingOffers = await this.offerRepo.find({
+            where: {
+                auction: {
+                    owner: { id: user.id }
+                },
+                status: OfferStatus.PENDING
+            },
+            relations: ['auction', 'buyer'],
+            order: {
+                createdAt: 'DESC'
+            }
+        });
+
+        // Group offers by auction ID
+        const offersByAuction = pendingOffers.reduce((acc, offer) => {
+            if (!acc[offer.auctionId]) {
+                acc[offer.auctionId] = [];
+            }
+            acc[offer.auctionId].push({
+                id: offer.id,
+                amount: offer.amount,
+                status: offer.status,
+                createdAt: offer.createdAt,
+                message: offer.message,
+                buyerId: offer.buyer.id,
+                buyerUsername: offer.buyer.username,
+                buyerFirstName: offer.buyer.firstName
+            });
+            return acc;
+        }, {});
+
+        // Add pending offers to each auction
+        const auctionsWithOffers = auctionsResponse.auctions.map(auction => ({
+            ...auction,
+            pendingOffers: offersByAuction[auction.id] || []
+        }));
+
+        return {
+            ...auctionsResponse,
+            auctions: auctionsWithOffers
+        };
     }
 
     async createAuction(createAuctionDto: CreateAuctionRequest, owner: User): Promise<AuctionResponseDto> {

@@ -102,6 +102,15 @@ export class AuctionsController {
         return this.auctionsService.getMyAuctions(req.user, filters);
     }
 
+    @Get('my-auctions-with-offers')
+    @UseGuards(JwtAuthGuard)
+    async getMyAuctionsWithOffers(
+        @Query() filters: AuctionFiltersDto,
+        @Request() req
+    ): Promise<any> {
+        return this.auctionsService.getMyAuctionsWithOffers(req.user, filters);
+    }
+
     @Get('categories')
     getCategories(): AuctionCategory[] {
         return Object.values(AuctionCategory);

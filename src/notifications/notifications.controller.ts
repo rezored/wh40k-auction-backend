@@ -10,7 +10,7 @@ import type {
     DeleteNotificationResponse
 } from './dto/notification.dto';
 
-@Controller('api/v1/notifications')
+@Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
     constructor(private notificationsService: NotificationsService) { }

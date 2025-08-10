@@ -72,6 +72,29 @@ export class OffersController {
         return this.offersService.getAuctionOffers(auctionId, req.user.id);
     }
 
+    @Get('my-auction-offers')
+    @UseGuards(JwtAuthGuard)
+    async getMyAuctionOffers(@Request() req) {
+        const userId = req.user.id;
+        const offers = await this.offersService.getOffersForAuctionOwner(userId);
+
+        return {
+            offers: offers.map(offer => ({
+                id: offer.id,
+                amount: offer.amount,
+                status: offer.status,
+                createdAt: offer.createdAt,
+                message: offer.message,
+                auctionId: offer.auction.id,
+                auctionTitle: offer.auction.title,
+                auctionImage: offer.auction.imageUrl,
+                buyerId: offer.buyer.id,
+                buyerUsername: offer.buyer.username,
+                buyerFirstName: offer.buyer.firstName
+            }))
+        };
+    }
+
     @Get(':offerId')
     @UseGuards(JwtAuthGuard)
     async getOfferById(@Param('offerId') offerId: string): Promise<Offer> {

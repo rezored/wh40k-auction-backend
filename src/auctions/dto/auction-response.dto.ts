@@ -44,6 +44,10 @@ export class AuctionListResponseDto {
     images: AuctionImage[];
     startingPrice: number;
     currentPrice: number;
+    reservePrice?: number;
+    saleType: SaleType;
+    minOffer?: number;
+    offerExpiryDays?: number;
     category: AuctionCategory;
     condition: AuctionCondition;
     categoryGroup?: string;
@@ -55,6 +59,7 @@ export class AuctionListResponseDto {
     endTime?: Date;
     owner: SafeUserDto;
     bidCount: number;
+    offers?: any[]; // Array of offers for this auction
 }
 
 export class AuctionFiltersDto {

@@ -1,17 +1,16 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Offer, OfferStatus } from './offers.entity';
 import { User } from '../user/user.entity';
 import { Auction, AuctionStatus, SaleType } from '../auctions/auctions.entity';
-import { AuctionsService } from '../auctions/auctions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OffersService {
     constructor(
         @InjectRepository(Offer) private repo: Repository<Offer>,
-        private auctionsService: AuctionsService,
+        @InjectRepository(Auction) private auctionRepo: Repository<Auction>,
         private notificationsService: NotificationsService
     ) { }
 
@@ -21,7 +20,14 @@ export class OffersService {
         amount: number,
         message?: string
     ): Promise<Offer> {
-        const auction = await this.auctionsService.findById(auctionId);
+        const auction = await this.auctionRepo.findOne({
+            where: { id: auctionId },
+            relations: ['owner']
+        });
+
+        if (!auction) {
+            throw new NotFoundException('Auction not found');
+        }
 
         // Validate auction is direct sale
         if (auction.saleType !== SaleType.DIRECT) {
@@ -91,7 +97,7 @@ export class OffersService {
     ): Promise<Offer> {
         const offer = await this.repo.findOne({
             where: { id: offerId },
-            relations: ['auction', 'buyer']
+            relations: ['auction', 'auction.owner', 'buyer']
         });
 
         if (!offer) {
@@ -113,7 +119,7 @@ export class OffersService {
             offer.status = OfferStatus.ACCEPTED;
 
             // Update auction status to sold
-            await this.auctionsService.updateAuctionStatus(offer.auctionId, AuctionStatus.SOLD);
+            await this.auctionRepo.update(offer.auctionId, { status: AuctionStatus.SOLD });
 
             // Reject all other pending offers
             await this.repo.update(
@@ -148,7 +154,15 @@ export class OffersService {
 
     async getReceivedOffers(auctionId: number, user: User): Promise<Offer[]> {
         // First verify the user owns the auction
-        const auction = await this.auctionsService.findById(auctionId);
+        const auction = await this.auctionRepo.findOne({
+            where: { id: auctionId },
+            relations: ['owner']
+        });
+
+        if (!auction) {
+            throw new NotFoundException('Auction not found');
+        }
+
         if (auction.owner.id !== user.id) {
             throw new ForbiddenException('You can only view offers for your own auctions');
         }
@@ -162,7 +176,15 @@ export class OffersService {
 
     async getAuctionOffers(auctionId: number, sellerId: number): Promise<Offer[]> {
         // Validate seller owns the auction
-        const auction = await this.auctionsService.findById(auctionId);
+        const auction = await this.auctionRepo.findOne({
+            where: { id: auctionId },
+            relations: ['owner']
+        });
+
+        if (!auction) {
+            throw new NotFoundException('Auction not found');
+        }
+
         if (auction.owner.id !== sellerId) {
             throw new ForbiddenException('Only the auction owner can view offers');
         }
@@ -209,6 +231,46 @@ export class OffersService {
         });
     }
 
+    async getOffersForAuctionOwner(ownerId: number): Promise<Offer[]> {
+        return this.repo.find({
+            where: {
+                auction: {
+                    owner: { id: ownerId }
+                },
+                status: OfferStatus.PENDING
+            },
+            relations: ['auction', 'buyer', 'auction.owner'],
+            order: {
+                createdAt: 'DESC'
+            }
+        });
+    }
+
+    async getOffersForUserAuctions(ownerId: number): Promise<Offer[]> {
+        // Get all auctions owned by the user
+        const userAuctions = await this.repo.manager.find(Auction, {
+            where: { owner: { id: ownerId } },
+            select: ['id']
+        });
+
+        const auctionIds = userAuctions.map(auction => auction.id);
+
+        if (auctionIds.length === 0) {
+            return [];
+        }
+
+        return this.repo.find({
+            where: {
+                auctionId: In(auctionIds),
+                status: OfferStatus.PENDING
+            },
+            relations: ['auction', 'buyer'],
+            order: {
+                createdAt: 'DESC'
+            }
+        });
+    }
+
     async acceptOfferWithAddress(
         offerId: string,
         seller: User,
@@ -216,7 +278,7 @@ export class OffersService {
     ): Promise<{ offer: Offer; message: string }> {
         const offer = await this.repo.findOne({
             where: { id: offerId },
-            relations: ['auction', 'buyer']
+            relations: ['auction', 'auction.owner', 'buyer']
         });
 
         if (!offer) {
@@ -251,7 +313,7 @@ export class OffersService {
     ): Promise<{ message: string }> {
         const offer = await this.repo.findOne({
             where: { id: offerId },
-            relations: ['auction', 'buyer']
+            relations: ['auction', 'auction.owner', 'buyer']
         });
 
         if (!offer) {

@@ -7,6 +7,7 @@ import { Auction } from './auctions.entity';
 import { AuctionImage } from './auction-image.entity';
 import { Bid } from '../bids/bids.entity';
 import { BidsService } from '../bids/bids.service';
+import { Offer } from '../offers/offers.entity';
 import { OffersModule } from '../offers/offers.module';
 import { ImageService } from './image.service';
 import { AuthModule } from '../auth/auth.module';
@@ -14,7 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Auction, AuctionImage, Bid]),
+    TypeOrmModule.forFeature([Auction, AuctionImage, Bid, Offer]),
     forwardRef(() => OffersModule),
     AuthModule,
     NotificationsModule,
