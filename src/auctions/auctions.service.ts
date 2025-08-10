@@ -7,6 +7,7 @@ import { Bid } from '../bids/bids.entity';
 import { AuctionImage, ImageStatus } from './auction-image.entity';
 import { CreateAuctionEnhancedDto } from './dto/create-auction-enhanced.dto';
 import { AuctionResponseDto, AuctionListResponseDto, SafeUserDto, AuctionFiltersDto, PaginatedAuctionsResponseDto } from './dto/auction-response.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface CreateAuctionRequest {
     title: string;
@@ -66,7 +67,8 @@ export class AuctionsService {
     constructor(
         @InjectRepository(Auction) private repo: Repository<Auction>,
         @InjectRepository(Bid) private bidRepo: Repository<Bid>,
-        @InjectRepository(AuctionImage) private imageRepo: Repository<AuctionImage>
+        @InjectRepository(AuctionImage) private imageRepo: Repository<AuctionImage>,
+        private notificationsService: NotificationsService
     ) { }
 
     private transformToSafeUser(user: User): SafeUserDto {
@@ -417,6 +419,10 @@ export class AuctionsService {
 
         auction.status = AuctionStatus.ENDED;
         const endedAuction = await this.repo.save(auction);
+
+        // Send notifications
+        await this.sendAuctionEndNotifications(endedAuction);
+
         return this.transformToSafeAuction(endedAuction);
     }
 
@@ -577,5 +583,29 @@ export class AuctionsService {
             auctionId,
             winnerData
         };
+    }
+
+    private async sendAuctionEndNotifications(auction: Auction): Promise<void> {
+        try {
+            // Notify auction owner that auction has ended
+            await this.notificationsService.notifyAuctionEnded(
+                auction.owner.id,
+                auction.title,
+                auction.id
+            );
+
+            // If there's a winning bid, notify the winner
+            const winningBid = await this.getWinningBid(auction.id);
+            if (winningBid) {
+                await this.notificationsService.notifyAuctionWon(
+                    winningBid.bidder.id,
+                    auction.title,
+                    winningBid.amount,
+                    auction.id
+                );
+            }
+        } catch (error) {
+            console.error('Failed to send auction end notifications:', error);
+        }
     }
 } 

@@ -24,7 +24,8 @@ export enum AuctionCategory {
   WARHAMMER_40K = 'warhammer-40k',
   FANTASY_SCI_FI = 'fantasy-sci-fi',
   BOARD_GAMES = 'board-games',
-  COLLECTIBLES = 'collectibles'
+  COLLECTIBLES = 'collectibles',
+  WORLD_WARS = 'world-wars'
 }
 
 export enum AuctionCondition {

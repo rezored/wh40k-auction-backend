@@ -1,72 +1,49 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
-import { Auction } from '../auctions/auctions.entity';
-import { Offer } from '../offers/offers.entity';
 
 export enum NotificationType {
-    AUCTION_WON = 'auction_won',
-    OFFER_ACCEPTED = 'offer_accepted',
+    BID_PLACED = 'bid_placed',
     BID_OUTBID = 'bid_outbid',
-    AUCTION_ENDING = 'auction_ending',
-    GENERAL = 'general'
+    OFFER_RECEIVED = 'offer_received',
+    OFFER_ACCEPTED = 'offer_accepted',
+    OFFER_REJECTED = 'offer_rejected',
+    OFFER_EXPIRED = 'offer_expired',
+    AUCTION_ENDED = 'auction_ended',
+    AUCTION_WON = 'auction_won'
 }
 
 @Entity('notifications')
 export class Notification {
-    @PrimaryGeneratedColumn()
-    id: number;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
+
+    @Column({ name: 'user_id' })
+    userId: number;
 
     @Column({
         type: 'enum',
-        enum: NotificationType,
-        default: NotificationType.GENERAL
+        enum: NotificationType
     })
     type: NotificationType;
 
     @Column()
     title: string;
 
-    @Column({ type: 'text' })
+    @Column('text')
     message: string;
 
-    @Column({ nullable: true })
-    auctionId: number;
+    @Column('jsonb', { default: {} })
+    data: any;
 
-    @Column({ nullable: true })
-    offerId: number;
-
-    @Column()
-    recipientId: number;
-
-    @Column({ nullable: true })
-    senderId: number;
-
-    @Column({ default: false })
+    @Column({ name: 'is_read', default: false })
     isRead: boolean;
 
-    @Column({ type: 'json', nullable: true })
-    metadata: {
-        winnerAddress?: any;
-        finalPrice?: number;
-        shippingInfo?: any;
-    };
-
-    @CreateDateColumn()
+    @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 
-    @ManyToOne(() => User, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'recipientId' })
-    recipient: User;
+    @UpdateDateColumn({ name: 'updated_at' })
+    updatedAt: Date;
 
-    @ManyToOne(() => User, { onDelete: 'SET NULL' })
-    @JoinColumn({ name: 'senderId' })
-    sender: User;
-
-    @ManyToOne(() => Auction, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'auctionId' })
-    auction: Auction;
-
-    @ManyToOne(() => Offer, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'offerId' })
-    offer: Offer;
+    @ManyToOne(() => User, user => user.id)
+    user: User;
 }

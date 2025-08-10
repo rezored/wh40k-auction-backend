@@ -1,54 +1,55 @@
-import { Controller, Get, Put, Delete, Param, Query, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { NotificationQueryDto, NotificationListResponseDto } from './dto/notification.dto';
+import type {
+    GetNotificationsQuery,
+    NotificationResponse,
+    UnreadCountResponse,
+    MarkAsReadResponse,
+    MarkAllAsReadResponse,
+    DeleteNotificationResponse
+} from './dto/notification.dto';
 
-@Controller('notifications')
+@Controller('api/v1/notifications')
+@UseGuards(JwtAuthGuard)
 export class NotificationsController {
     constructor(private notificationsService: NotificationsService) { }
 
     @Get()
-    @UseGuards(JwtAuthGuard)
-    async getUserNotifications(
-        @Request() req,
-        @Query() query: NotificationQueryDto
-    ): Promise<NotificationListResponseDto> {
-        return this.notificationsService.getUserNotifications(
-            req.user.id,
-            query.page,
-            query.limit,
-            query.unreadOnly
-        );
-    }
-
-    @Put(':notificationId/read')
-    @UseGuards(JwtAuthGuard)
-    async markNotificationAsRead(
-        @Request() req,
-        @Param('notificationId', ParseIntPipe) notificationId: number
-    ): Promise<{ message: string }> {
-        return this.notificationsService.markNotificationAsRead(req.user.id, notificationId);
-    }
-
-    @Put('read-all')
-    @UseGuards(JwtAuthGuard)
-    async markAllNotificationsAsRead(@Request() req): Promise<{ message: string }> {
-        return this.notificationsService.markAllNotificationsAsRead(req.user.id);
-    }
-
-    @Delete(':notificationId')
-    @UseGuards(JwtAuthGuard)
-    async deleteNotification(
-        @Request() req,
-        @Param('notificationId', ParseIntPipe) notificationId: number
-    ): Promise<{ message: string }> {
-        return this.notificationsService.deleteNotification(req.user.id, notificationId);
+    async getNotifications(
+        @Req() req,
+        @Query() query: GetNotificationsQuery
+    ): Promise<NotificationResponse> {
+        return await this.notificationsService.getUserNotifications(req.user.id, query);
     }
 
     @Get('unread-count')
-    @UseGuards(JwtAuthGuard)
-    async getUnreadCount(@Request() req): Promise<{ count: number }> {
+    async getUnreadCount(@Req() req): Promise<UnreadCountResponse> {
         const count = await this.notificationsService.getUnreadCount(req.user.id);
         return { count };
+    }
+
+    @Put(':id/read')
+    async markAsRead(
+        @Param('id') id: string,
+        @Req() req
+    ): Promise<MarkAsReadResponse> {
+        await this.notificationsService.markAsRead(id, req.user.id);
+        return { success: true };
+    }
+
+    @Put('mark-all-read')
+    async markAllAsRead(@Req() req): Promise<MarkAllAsReadResponse> {
+        await this.notificationsService.markAllAsRead(req.user.id);
+        return { success: true };
+    }
+
+    @Delete(':id')
+    async deleteNotification(
+        @Param('id') id: string,
+        @Req() req
+    ): Promise<DeleteNotificationResponse> {
+        await this.notificationsService.deleteNotification(id, req.user.id);
+        return { success: true };
     }
 }

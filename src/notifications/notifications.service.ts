@@ -1,212 +1,181 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './notification.entity';
-import { NotificationResponseDto, NotificationListResponseDto, WinnerNotificationDataDto, OfferAcceptanceDataDto } from './dto/notification.dto';
-import { UserAddress } from '../user/user-address.entity';
+import {
+    CreateNotificationDto,
+    GetNotificationsQuery,
+    NotificationResponse,
+    NotificationData
+} from './dto/notification.dto';
 
 @Injectable()
 export class NotificationsService {
     constructor(
         @InjectRepository(Notification)
-        private notificationRepository: Repository<Notification>,
+        private notificationRepository: Repository<Notification>
     ) { }
 
-    async getUserNotifications(
-        userId: number,
-        page: number = 1,
-        limit: number = 20,
-        unreadOnly: boolean = false
-    ): Promise<NotificationListResponseDto> {
-        const queryBuilder = this.notificationRepository
-            .createQueryBuilder('notification')
-            .where('notification.recipientId = :userId', { userId });
+    async createNotification(userId: number, data: CreateNotificationDto): Promise<Notification> {
+        const notification = this.notificationRepository.create({
+            userId,
+            ...data,
+            data: data.data || {}
+        });
+        return await this.notificationRepository.save(notification);
+    }
 
+    async getUserNotifications(userId: number, query: GetNotificationsQuery = {}): Promise<NotificationResponse> {
+        const { page = 1, limit = 50, unreadOnly = false } = query;
+        const skip = (page - 1) * limit;
+
+        const whereClause: any = { userId };
         if (unreadOnly) {
-            queryBuilder.andWhere('notification.isRead = :isRead', { isRead: false });
+            whereClause.isRead = false;
         }
 
-        const [notifications, total] = await queryBuilder
-            .orderBy('notification.createdAt', 'DESC')
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getManyAndCount();
+        const [notifications, total] = await this.notificationRepository.findAndCount({
+            where: whereClause,
+            order: { createdAt: 'DESC' },
+            skip,
+            take: limit
+        });
 
         const unreadCount = await this.getUnreadCount(userId);
 
         return {
-            notifications: notifications.map(this.mapToResponseDto),
-            total,
+            notifications,
             unreadCount
         };
     }
 
-    async markNotificationAsRead(userId: number, notificationId: number): Promise<{ message: string }> {
-        const notification = await this.notificationRepository.findOne({
-            where: { id: notificationId, recipientId: userId }
+    async getUnreadCount(userId: number): Promise<number> {
+        return await this.notificationRepository.count({
+            where: { userId, isRead: false }
         });
-
-        if (!notification) {
-            throw new NotFoundException('Notification not found');
-        }
-
-        notification.isRead = true;
-        await this.notificationRepository.save(notification);
-
-        return { message: 'Notification marked as read' };
     }
 
-    async markAllNotificationsAsRead(userId: number): Promise<{ message: string }> {
+    async markAsRead(notificationId: string, userId: number): Promise<void> {
         await this.notificationRepository.update(
-            { recipientId: userId, isRead: false },
+            { id: notificationId, userId },
             { isRead: true }
         );
-
-        return { message: 'All notifications marked as read' };
     }
 
-    async deleteNotification(userId: number, notificationId: number): Promise<{ message: string }> {
-        const notification = await this.notificationRepository.findOne({
-            where: { id: notificationId, recipientId: userId }
-        });
-
-        if (!notification) {
-            throw new NotFoundException('Notification not found');
-        }
-
-        await this.notificationRepository.remove(notification);
-        return { message: 'Notification deleted successfully' };
+    async markAllAsRead(userId: number): Promise<void> {
+        await this.notificationRepository.update(
+            { userId, isRead: false },
+            { isRead: true }
+        );
     }
 
-    async getUnreadCount(userId: number): Promise<number> {
-        return this.notificationRepository.count({
-            where: { recipientId: userId, isRead: false }
-        });
+    async deleteNotification(notificationId: string, userId: number): Promise<void> {
+        await this.notificationRepository.delete({ id: notificationId, userId });
     }
 
-    async createNotification(
-        type: NotificationType,
-        title: string,
-        message: string,
-        recipientId: number,
-        senderId?: number,
-        auctionId?: number,
-        offerId?: number,
-        metadata?: any
-    ): Promise<Notification> {
-        const notification = this.notificationRepository.create({
-            type,
-            title,
-            message,
-            recipientId,
-            senderId,
-            auctionId,
-            offerId,
-            metadata
-        });
-
-        return this.notificationRepository.save(notification);
-    }
-
-    async notifyAuctionWinner(
-        auctionId: number,
-        winnerData: WinnerNotificationDataDto
-    ): Promise<Notification> {
-        const title = `Congratulations! You won "${winnerData.auctionTitle}"`;
-        const message = winnerData.message ||
-            `You won the auction "${winnerData.auctionTitle}" for $${winnerData.finalPrice}. Please check your email for shipping details.`;
-
-        return this.createNotification(
-            NotificationType.AUCTION_WON,
-            title,
-            message,
-            winnerData.winnerId,
-            undefined,
-            auctionId,
-            undefined,
-            {
-                winnerAddress: winnerData.winnerAddress,
-                finalPrice: winnerData.finalPrice
+    // Helper methods for specific notification types
+    async notifyBidPlaced(auctionOwnerId: number, auctionTitle: string, bidAmount: number, bidderName: string, auctionId: number): Promise<void> {
+        await this.createNotification(auctionOwnerId, {
+            type: NotificationType.BID_PLACED,
+            title: 'New Bid Received',
+            message: `${bidderName} placed a bid of €${bidAmount} on "${auctionTitle}"`,
+            data: {
+                auctionId,
+                auctionTitle,
+                bidAmount,
+                bidderName
             }
-        );
+        });
     }
 
-    async notifyOfferAccepted(
-        offerId: number,
-        acceptanceData: OfferAcceptanceDataDto
-    ): Promise<Notification> {
-        const title = `Offer Accepted for "${acceptanceData.auctionTitle}"`;
-        const message = acceptanceData.message ||
-            `Your offer of $${acceptanceData.offerAmount} for "${acceptanceData.auctionTitle}" has been accepted. Please check your email for shipping details.`;
-
-        return this.createNotification(
-            NotificationType.OFFER_ACCEPTED,
-            title,
-            message,
-            acceptanceData.buyerId,
-            undefined,
-            undefined,
-            offerId,
-            {
-                buyerAddress: acceptanceData.buyerAddress,
-                offerAmount: acceptanceData.offerAmount
+    async notifyBidOutbid(userId: number, auctionTitle: string, bidAmount: number, auctionId: number): Promise<void> {
+        await this.createNotification(userId, {
+            type: NotificationType.BID_OUTBID,
+            title: 'You Have Been Outbid',
+            message: `Someone outbid you on "${auctionTitle}"`,
+            data: {
+                auctionId,
+                auctionTitle,
+                bidAmount
             }
-        );
+        });
     }
 
-    async notifyBidOutbid(
-        auctionId: number,
-        outbidUserId: number,
-        auctionTitle: string,
-        newHighestBid: number
-    ): Promise<Notification> {
-        const title = `You've been outbid on "${auctionTitle}"`;
-        const message = `Someone has placed a higher bid of $${newHighestBid} on "${auctionTitle}". Place a new bid to stay in the running!`;
-
-        return this.createNotification(
-            NotificationType.BID_OUTBID,
-            title,
-            message,
-            outbidUserId,
-            undefined,
-            auctionId,
-            undefined,
-            { newHighestBid }
-        );
+    async notifyOfferReceived(auctionOwnerId: number, auctionTitle: string, offerAmount: number, offererName: string, auctionId: number): Promise<void> {
+        await this.createNotification(auctionOwnerId, {
+            type: NotificationType.OFFER_RECEIVED,
+            title: 'New Offer Received',
+            message: `${offererName} made an offer of €${offerAmount} on "${auctionTitle}"`,
+            data: {
+                auctionId,
+                auctionTitle,
+                offerAmount,
+                offererName
+            }
+        });
     }
 
-    async notifyAuctionEnding(
-        auctionId: number,
-        userId: number,
-        auctionTitle: string,
-        hoursLeft: number
-    ): Promise<Notification> {
-        const title = `Auction ending soon: "${auctionTitle}"`;
-        const message = `The auction "${auctionTitle}" ends in ${hoursLeft} hours. Don't miss out!`;
-
-        return this.createNotification(
-            NotificationType.AUCTION_ENDING,
-            title,
-            message,
-            userId,
-            undefined,
-            auctionId
-        );
+    async notifyOfferAccepted(offererId: number, auctionTitle: string, offerAmount: number, auctionId: number): Promise<void> {
+        await this.createNotification(offererId, {
+            type: NotificationType.OFFER_ACCEPTED,
+            title: 'Offer Accepted!',
+            message: `Your offer of €${offerAmount} on "${auctionTitle}" was accepted!`,
+            data: {
+                auctionId,
+                auctionTitle,
+                offerAmount
+            }
+        });
     }
 
-    private mapToResponseDto(notification: Notification): NotificationResponseDto {
-        return {
-            id: notification.id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            auctionId: notification.auctionId,
-            offerId: notification.offerId,
-            recipientId: notification.recipientId,
-            senderId: notification.senderId,
-            isRead: notification.isRead,
-            createdAt: notification.createdAt,
-            metadata: notification.metadata
-        };
+    async notifyOfferRejected(offererId: number, auctionTitle: string, offerAmount: number, auctionId: number): Promise<void> {
+        await this.createNotification(offererId, {
+            type: NotificationType.OFFER_REJECTED,
+            title: 'Offer Rejected',
+            message: `Your offer of €${offerAmount} on "${auctionTitle}" was not accepted.`,
+            data: {
+                auctionId,
+                auctionTitle,
+                offerAmount
+            }
+        });
+    }
+
+    async notifyOfferExpired(offererId: number, auctionTitle: string, offerAmount: number, auctionId: number): Promise<void> {
+        await this.createNotification(offererId, {
+            type: NotificationType.OFFER_EXPIRED,
+            title: 'Offer Expired',
+            message: `Your offer of €${offerAmount} on "${auctionTitle}" has expired.`,
+            data: {
+                auctionId,
+                auctionTitle,
+                offerAmount
+            }
+        });
+    }
+
+    async notifyAuctionWon(winnerId: number, auctionTitle: string, finalPrice: number, auctionId: number): Promise<void> {
+        await this.createNotification(winnerId, {
+            type: NotificationType.AUCTION_WON,
+            title: 'Congratulations! You Won!',
+            message: `You won the auction "${auctionTitle}" for €${finalPrice}`,
+            data: {
+                auctionId,
+                auctionTitle,
+                finalPrice
+            }
+        });
+    }
+
+    async notifyAuctionEnded(auctionOwnerId: number, auctionTitle: string, auctionId: number): Promise<void> {
+        await this.createNotification(auctionOwnerId, {
+            type: NotificationType.AUCTION_ENDED,
+            title: 'Auction Ended',
+            message: `Your auction "${auctionTitle}" has ended`,
+            data: {
+                auctionId,
+                auctionTitle
+            }
+        });
     }
 }

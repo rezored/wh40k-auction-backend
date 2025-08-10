@@ -6,9 +6,10 @@ import { OffersService } from './offers.service';
 // import { OffersCronService } from './offers-cron.service';
 import { Offer } from './offers.entity';
 import { AuctionsModule } from '../auctions/auctions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Offer]), forwardRef(() => AuctionsModule)],
+  imports: [TypeOrmModule.forFeature([Offer]), forwardRef(() => AuctionsModule), NotificationsModule],
   controllers: [OffersController],
   providers: [OffersService],
   exports: [OffersService],

@@ -5,12 +5,14 @@ import { Offer, OfferStatus } from './offers.entity';
 import { User } from '../user/user.entity';
 import { Auction, AuctionStatus, SaleType } from '../auctions/auctions.entity';
 import { AuctionsService } from '../auctions/auctions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OffersService {
     constructor(
         @InjectRepository(Offer) private repo: Repository<Offer>,
-        private auctionsService: AuctionsService
+        private auctionsService: AuctionsService,
+        private notificationsService: NotificationsService
     ) { }
 
     async createOffer(
@@ -74,7 +76,12 @@ export class OffersService {
             auction
         });
 
-        return this.repo.save(offer);
+        const savedOffer = await this.repo.save(offer);
+
+        // Send notification to auction owner
+        await this.sendOfferNotification(savedOffer);
+
+        return savedOffer;
     }
 
     async respondToOffer(
@@ -117,9 +124,15 @@ export class OffersService {
                 },
                 { status: OfferStatus.REJECTED }
             );
+
+            // Send notification to offer maker
+            await this.sendOfferResponseNotification(offer, 'accepted');
         } else {
             // Reject the offer
             offer.status = OfferStatus.REJECTED;
+
+            // Send notification to offer maker
+            await this.sendOfferResponseNotification(offer, 'rejected');
         }
 
         return this.repo.save(offer);
@@ -253,5 +266,41 @@ export class OffersService {
         return {
             message: 'Offer acceptance notification sent successfully'
         };
+    }
+
+    private async sendOfferNotification(offer: Offer): Promise<void> {
+        try {
+            await this.notificationsService.notifyOfferReceived(
+                offer.auction.owner.id,
+                offer.auction.title,
+                offer.amount,
+                offer.buyer.firstName || offer.buyer.username || 'Anonymous',
+                offer.auctionId
+            );
+        } catch (error) {
+            console.error('Failed to send offer notification:', error);
+        }
+    }
+
+    private async sendOfferResponseNotification(offer: Offer, response: 'accepted' | 'rejected'): Promise<void> {
+        try {
+            if (response === 'accepted') {
+                await this.notificationsService.notifyOfferAccepted(
+                    offer.buyerId,
+                    offer.auction.title,
+                    offer.amount,
+                    offer.auctionId
+                );
+            } else {
+                await this.notificationsService.notifyOfferRejected(
+                    offer.buyerId,
+                    offer.auction.title,
+                    offer.amount,
+                    offer.auctionId
+                );
+            }
+        } catch (error) {
+            console.error('Failed to send offer response notification:', error);
+        }
     }
 }

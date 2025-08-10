@@ -1,63 +1,51 @@
-import { IsOptional, IsNumber, IsBoolean, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
 import { NotificationType } from '../notification.entity';
-import { UserAddress } from '../../user/user-address.entity';
 
-export class NotificationResponseDto {
-    id: number;
+export interface NotificationData {
+    auctionId?: number;
+    auctionTitle?: string;
+    bidAmount?: number;
+    offerAmount?: number;
+    bidderName?: string;
+    offererName?: string;
+    winnerAddress?: any;
+    finalPrice?: number;
+    shippingInfo?: any;
+}
+
+export interface CreateNotificationDto {
     type: NotificationType;
     title: string;
     message: string;
-    auctionId?: number;
-    offerId?: number;
-    recipientId: number;
-    senderId?: number;
-    isRead: boolean;
-    createdAt: Date;
-    metadata?: {
-        winnerAddress?: UserAddress;
-        finalPrice?: number;
-        shippingInfo?: any;
-    };
+    data?: NotificationData;
 }
 
-export class NotificationQueryDto {
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    @Min(1)
-    page?: number = 1;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    @Min(1)
-    @Max(100)
-    limit?: number = 20;
-
-    @IsOptional()
-    @IsBoolean()
-    unreadOnly?: boolean;
-}
-
-export class NotificationListResponseDto {
-    notifications: NotificationResponseDto[];
-    total: number;
+export interface NotificationResponse {
+    notifications: any[];
     unreadCount: number;
 }
 
-export class WinnerNotificationDataDto {
-    winnerId: number;
-    winnerAddress: UserAddress;
-    finalPrice: number;
-    auctionTitle: string;
-    message?: string;
+export interface GetNotificationsQuery {
+    page?: number;
+    limit?: number;
+    unreadOnly?: boolean;
 }
 
-export class OfferAcceptanceDataDto {
-    buyerId: number;
-    buyerAddress: UserAddress;
-    offerAmount: number;
-    auctionTitle: string;
-    message?: string;
+export interface UnreadCountResponse {
+    count: number;
+}
+
+export interface MarkAsReadResponse {
+    success: boolean;
+}
+
+export interface MarkAllAsReadResponse {
+    success: boolean;
+}
+
+export interface DeleteNotificationResponse {
+    success: boolean;
+}
+
+export interface CreateNotificationResponse {
+    notification: any;
 }

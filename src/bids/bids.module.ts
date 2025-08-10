@@ -4,11 +4,12 @@ import { BidsController } from './bids.controller';
 import { BidsService } from './bids.service';
 import { Bid } from './bids.entity';
 import { AuctionsModule } from '../auctions/auctions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Bid]), AuctionsModule],
+  imports: [TypeOrmModule.forFeature([Bid]), AuctionsModule, NotificationsModule],
   controllers: [BidsController],
   providers: [BidsService],
   exports: [BidsService],
 })
-export class BidsModule {}
+export class BidsModule { }
