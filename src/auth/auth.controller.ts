@@ -10,14 +10,14 @@ export class AuthController {
     @Post('register')
     async register(@Body() body) {
         const hashed = await bcrypt.hash(body.password, 10);
-        
+
         // Generate a default username if not provided
         const username = body.username || `user_${Date.now()}`;
-        
-        return this.userService.createUser({ 
-            ...body, 
+
+        return this.userService.createUser({
+            ...body,
             password: hashed,
-            username 
+            username
         });
     }
 

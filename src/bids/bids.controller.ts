@@ -29,7 +29,7 @@ export class BidsController {
             console.log('🎯 Bids Controller - getMyBids called');
             console.log('🎯 Bids Controller - User ID:', req.user.id);
             console.log('🎯 Bids Controller - User:', req.user);
-            
+
             const bids = await this.bidsService.getBidsByUser(req.user.id);
             console.log('🎯 Bids Controller - Found bids:', bids.length);
             return bids;

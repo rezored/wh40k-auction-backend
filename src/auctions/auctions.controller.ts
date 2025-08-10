@@ -16,15 +16,17 @@ import {
     MaxFileSizeValidator,
     FileTypeValidator,
     BadRequestException,
-    ForbiddenException
+    ForbiddenException,
+    UnauthorizedException
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuctionsService } from './auctions.service';
 import type { UpdateAuctionRequest } from './auctions.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { CreateAuctionEnhancedDto } from './dto/create-auction-enhanced.dto';
-import { AuctionResponseDto, AuctionListResponseDto } from './dto/auction-response.dto';
+import { AuctionResponseDto, AuctionListResponseDto, AuctionFiltersDto, PaginatedAuctionsResponseDto } from './dto/auction-response.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
 import { Auction, AuctionStatus, AuctionCategory, AuctionCondition } from './auctions.entity';
 import { Bid } from '../bids/bids.entity';
 import { BidsService } from '../bids/bids.service';
@@ -42,22 +44,53 @@ export class AuctionsController {
     ) { }
 
     @Get()
+    @UseGuards(OptionalJwtAuthGuard)
     async getAllAuctions(
-        @Query('status') status?: AuctionStatus,
-        @Query('category') category?: AuctionCategory,
-        @Query('condition') condition?: AuctionCondition,
-        @Query('search') search?: string
-    ): Promise<AuctionListResponseDto[]> {
-        if (status === AuctionStatus.ACTIVE) {
-            return this.auctionsService.findActiveAuctions();
+        @Query() filters: AuctionFiltersDto,
+        @Request() req
+    ): Promise<PaginatedAuctionsResponseDto> {
+        // Extract current user if authenticated
+        const currentUser = req.user || null;
+
+        console.log(`🎯 GET /auctions - Filters:`, filters);
+        console.log(`🎯 GET /auctions - User authenticated:`, !!currentUser);
+        if (currentUser) {
+            console.log(`🎯 GET /auctions - User ID: ${currentUser.id}`);
         }
 
-        return this.auctionsService.findAll();
+        // If showOwn is requested but user is not authenticated, throw error
+        if (filters.showOwn && !currentUser) {
+            console.log('❌ showOwn requested without authentication');
+            throw new UnauthorizedException({
+                message: 'Authentication required to view your own auctions',
+                code: 'AUTH_REQUIRED_FOR_OWN_AUCTIONS',
+                statusCode: 401
+            });
+        }
+
+        return this.auctionsService.getAuctionsWithFilters(filters, currentUser);
     }
 
     @Get('active')
-    async getActiveAuctions(): Promise<AuctionListResponseDto[]> {
-        return this.auctionsService.findActiveAuctions();
+    @UseGuards(OptionalJwtAuthGuard)
+    async getActiveAuctions(
+        @Query() filters: AuctionFiltersDto,
+        @Request() req
+    ): Promise<PaginatedAuctionsResponseDto> {
+        // Force status to ACTIVE for this endpoint
+        filters.status = AuctionStatus.ACTIVE;
+        const currentUser = req.user || null;
+
+        return this.auctionsService.getAuctionsWithFilters(filters, currentUser);
+    }
+
+    @Get('my-auctions')
+    @UseGuards(JwtAuthGuard)
+    async getMyAuctions(
+        @Query() filters: AuctionFiltersDto,
+        @Request() req
+    ): Promise<PaginatedAuctionsResponseDto> {
+        return this.auctionsService.getMyAuctions(req.user, filters);
     }
 
     @Get('categories')

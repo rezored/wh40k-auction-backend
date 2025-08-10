@@ -11,7 +11,7 @@ export class OffersService {
     constructor(
         @InjectRepository(Offer) private repo: Repository<Offer>,
         private auctionsService: AuctionsService
-    ) {}
+    ) { }
 
     async createOffer(
         auctionId: number,
@@ -59,7 +59,7 @@ export class OffersService {
         }
 
         // Calculate expiration date
-        const expiresAt = auction.offerExpiryDays 
+        const expiresAt = auction.offerExpiryDays
             ? new Date(Date.now() + auction.offerExpiryDays * 24 * 60 * 60 * 1000)
             : null;
 
@@ -104,14 +104,14 @@ export class OffersService {
         if (response === 'accept') {
             // Accept the offer
             offer.status = OfferStatus.ACCEPTED;
-            
+
             // Update auction status to sold
             await this.auctionsService.updateAuctionStatus(offer.auctionId, AuctionStatus.SOLD);
-            
+
             // Reject all other pending offers
             await this.repo.update(
-                { 
-                    auctionId: offer.auctionId, 
+                {
+                    auctionId: offer.auctionId,
                     status: OfferStatus.PENDING,
                     id: offerId // Exclude the accepted offer
                 },
@@ -128,6 +128,20 @@ export class OffersService {
     async getMyOffers(userId: number): Promise<Offer[]> {
         return this.repo.find({
             where: { buyerId: userId },
+            relations: ['auction', 'buyer'],
+            order: { createdAt: 'DESC' }
+        });
+    }
+
+    async getReceivedOffers(auctionId: number, user: User): Promise<Offer[]> {
+        // First verify the user owns the auction
+        const auction = await this.auctionsService.findById(auctionId);
+        if (auction.owner.id !== user.id) {
+            throw new ForbiddenException('You can only view offers for your own auctions');
+        }
+
+        return this.repo.find({
+            where: { auctionId },
             relations: ['auction', 'buyer'],
             order: { createdAt: 'DESC' }
         });
@@ -162,9 +176,9 @@ export class OffersService {
 
     async expireOffers(): Promise<void> {
         const now = new Date();
-        
+
         await this.repo.update(
-            { 
+            {
                 status: OfferStatus.PENDING,
                 expiresAt: now
             },

@@ -9,11 +9,13 @@ import { Bid } from '../bids/bids.entity';
 import { BidsService } from '../bids/bids.service';
 import { OffersModule } from '../offers/offers.module';
 import { ImageService } from './image.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Auction, AuctionImage, Bid]),
     forwardRef(() => OffersModule),
+    AuthModule,
     MulterModule.register({
       storage: undefined, // Use memory storage
     }),

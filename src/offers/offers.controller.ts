@@ -1,13 +1,13 @@
-import { 
-    Controller, 
-    Post, 
-    Get, 
-    Put, 
-    Body, 
-    Param, 
-    UseGuards, 
-    Request, 
-    ParseIntPipe 
+import {
+    Controller,
+    Post,
+    Get,
+    Put,
+    Body,
+    Param,
+    UseGuards,
+    Request,
+    ParseIntPipe
 } from '@nestjs/common';
 import { OffersService } from './offers.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -17,7 +17,7 @@ import { RespondOfferDto } from './dto/respond-offer.dto';
 
 @Controller('offers')
 export class OffersController {
-    constructor(private offersService: OffersService) {}
+    constructor(private offersService: OffersService) { }
 
     @Post('auction/:auctionId')
     @UseGuards(JwtAuthGuard)
@@ -52,6 +52,15 @@ export class OffersController {
     @UseGuards(JwtAuthGuard)
     async getMyOffers(@Request() req): Promise<Offer[]> {
         return this.offersService.getMyOffers(req.user.id);
+    }
+
+    @Get('received/:auctionId')
+    @UseGuards(JwtAuthGuard)
+    async getReceivedOffers(
+        @Param('auctionId', ParseIntPipe) auctionId: number,
+        @Request() req
+    ): Promise<Offer[]> {
+        return this.offersService.getReceivedOffers(auctionId, req.user);
     }
 
     @Get('auction/:auctionId')

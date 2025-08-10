@@ -1,6 +1,8 @@
 import { AuctionStatus, AuctionCategory, AuctionCondition, SaleType } from '../auctions.entity';
 import { AuctionImage } from '../auction-image.entity';
 import { Bid } from '../../bids/bids.entity';
+import { IsOptional, IsEnum, IsString, IsNumber, IsBoolean, Min, Max } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class SafeUserDto {
     id: number;
@@ -53,4 +55,82 @@ export class AuctionListResponseDto {
     endTime?: Date;
     owner: SafeUserDto;
     bidCount: number;
+}
+
+export class AuctionFiltersDto {
+    @IsOptional()
+    @IsEnum(AuctionCategory)
+    category?: AuctionCategory;
+
+    @IsOptional()
+    @IsString()
+    categoryGroup?: string;
+
+    @IsOptional()
+    @IsString()
+    scale?: string;
+
+    @IsOptional()
+    @IsString()
+    era?: string;
+
+    @IsOptional()
+    @IsEnum(AuctionCondition)
+    condition?: AuctionCondition;
+
+    @IsOptional()
+    @IsEnum(AuctionStatus)
+    status?: AuctionStatus;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    minPrice?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    maxPrice?: number;
+
+    @IsOptional()
+    @IsString()
+    priceRange?: string; // For frontend compatibility
+
+    @IsOptional()
+    @Transform(({ value }) => value === 'true')
+    @IsBoolean()
+    showOwn?: boolean;
+
+    @IsOptional()
+    @IsString()
+    search?: string;
+
+    @IsOptional()
+    @IsString()
+    sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc';
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    page?: number = 1;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    @Max(100)
+    limit?: number = 20;
+}
+
+export class PaginatedAuctionsResponseDto {
+    auctions: AuctionListResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
 }
