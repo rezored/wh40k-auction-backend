@@ -5,7 +5,7 @@ import { UserProfileDto, UpdateProfileRequestDto, ChangePasswordRequestDto } fro
 import { AddAddressRequestDto, UpdateAddressRequestDto } from './dto/address.dto';
 import { UserAddress } from './user-address.entity';
 
-@Controller('api/v1/users')
+@Controller('users')
 export class UserController {
     constructor(private userService: UserService) { }
 

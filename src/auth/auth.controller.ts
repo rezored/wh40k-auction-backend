@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 
-@Controller('api/v1/auth')
+@Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService, private userService: UserService) { }
 

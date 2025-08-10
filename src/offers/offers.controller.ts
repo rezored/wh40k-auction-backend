@@ -15,7 +15,7 @@ import { Offer } from './offers.entity';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { RespondOfferDto } from './dto/respond-offer.dto';
 
-@Controller('api/v1/offers')
+@Controller('offers')
 export class OffersController {
     constructor(private offersService: OffersService) { }
 

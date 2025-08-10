@@ -34,7 +34,7 @@ import { OffersService } from '../offers/offers.service';
 import { ImageService } from './image.service';
 import { ImageReorderRequestDto } from './dto/image-upload.dto';
 
-@Controller('api/v1/auctions')
+@Controller('auctions')
 export class AuctionsController {
     constructor(
         private auctionsService: AuctionsService,

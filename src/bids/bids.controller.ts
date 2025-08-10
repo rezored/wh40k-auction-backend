@@ -4,7 +4,7 @@ import { PlaceBidDto } from './dto/place-bid.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { Bid } from './bids.entity';
 
-@Controller('api/v1/bids')
+@Controller('bids')
 export class BidsController {
     constructor(private bidsService: BidsService) { }
 

@@ -3,7 +3,7 @@ import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { NotificationQueryDto, NotificationListResponseDto } from './dto/notification.dto';
 
-@Controller('api/v1/notifications')
+@Controller('notifications')
 export class NotificationsController {
     constructor(private notificationsService: NotificationsService) { }
 
