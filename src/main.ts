@@ -13,10 +13,20 @@ async function bootstrap() {
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
     // Enable CORS
-    const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:4200'];
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [
+        'http://localhost:4200',
+        'https://brainfryer.com',
+        'https://www.brainfryer.com'
+    ];
+
+    console.log(`🌐 CORS Origins: ${corsOrigins.join(', ')}`);
+
     app.enableCors({
         origin: corsOrigins,
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        exposedHeaders: ['Content-Range', 'X-Content-Range'],
     });
 
     // Serve static files for uploaded images
